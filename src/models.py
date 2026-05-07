@@ -95,6 +95,27 @@ class FacebookPost:
 
 
 @dataclass
+class InstagramMetadata:
+    caption: str
+    hashtags: list[str] = field(default_factory=list)
+
+
+@dataclass
+class InstagramPost:
+    id: int = 0
+    image_path: str = ""
+    image_hash: str = ""
+    caption: str = ""
+    target_keyword: str = ""
+    content_type: str = "seo"
+    status: str = "pending"
+    scheduled_at: datetime | None = None
+    posted_at: datetime | None = None
+    instagram_url: str = ""
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass
 class DailyLimits:
     max_pins: int = 1
     max_actions: int = 10

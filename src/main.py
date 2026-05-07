@@ -9,8 +9,9 @@ from src.utils.logger import setup_logging
 from src.store.database import Database
 from src.orchestrator import run_daily_cycle, start_scheduler
 from src.facebook_orchestrator import run_facebook_daily_cycle
+from src.instagram_orchestrator import run_instagram_daily_cycle
 
-app = typer.Typer(help="Pinterest & Facebook Growth Agent — AI-powered automation.")
+app = typer.Typer(help="Pinterest, Facebook & Instagram Growth Agent — AI-powered automation.")
 console = Console()
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,17 @@ def fb_run_now(
     db.initialize()
     console.print(f"[bold blue]Starting manual Facebook daily cycle...[/bold blue]")
     asyncio.run(run_facebook_daily_cycle(db, config, force=force))
+
+@app.command()
+def insta_run_now(
+    force: bool = typer.Option(False, "--force", help="Bypass daily safety limits"),
+):
+    """Force a single daily Instagram cycle immediately."""
+    config = load_config()
+    db = Database(config["paths"]["database"])
+    db.initialize()
+    console.print(f"[bold magenta]Starting manual Instagram daily cycle...[/bold magenta]")
+    asyncio.run(run_instagram_daily_cycle(db, config, force=force))
 
 @app.command()
 def stats():
