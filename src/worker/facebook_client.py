@@ -80,13 +80,8 @@ class FacebookClient:
 
             logger.info("Facebook session not valid. Performing fresh login...")
 
-            import os
-            email = os.getenv("FACEBOOK_EMAIL")
-            password = os.getenv("FACEBOOK_PASSWORD")
-
-            if not email or not password:
-                logger.error("FACEBOOK_EMAIL and FACEBOOK_PASSWORD must be set in .env")
-                return False
+            from src.utils.config import get_facebook_credentials
+            email, password = get_facebook_credentials()
 
             email_input = page.locator('input[id="email"]')
             await email_input.fill(email)

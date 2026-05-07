@@ -17,12 +17,18 @@ logger = logging.getLogger(__name__)
 async def run_instagram_daily_cycle(db: Database, config: dict, force: bool = False) -> None:
     """
     The complete daily agent cycle for Instagram:
-    1. Check safety limits
-    2. Research (hashtags)
-    3. Decide content mix
-    4. Generate images + metadata
-    5. Post to Instagram
+    1. Check credentials
+    2. Check safety limits
+    3. Research (hashtags)
+    4. Decide content mix
+    5. Generate images + metadata
+    6. Post to Instagram
     """
+    from src.utils.config import has_instagram_credentials
+    if not has_instagram_credentials():
+        logger.info("Instagram credentials not set. Skipping Instagram cycle.")
+        return
+
     logger.info("=== Starting Instagram daily cycle ===")
 
     safety = SafetyManager(db, config, platform='instagram')

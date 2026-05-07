@@ -75,6 +75,15 @@ def stats():
     recent_pins = db.get_recent_pins(days=7)
     total_pins = len(recent_pins)
     posted = sum(1 for p in recent_pins if p.status == "posted")
+
+    recent_fb = db.get_recent_facebook_posts(days=7)
+    total_fb = len(recent_fb)
+    posted_fb = sum(1 for p in recent_fb if p["status"] == "posted")
+
+    recent_insta = db.get_recent_instagram_posts(days=7)
+    total_insta = len(recent_insta)
+    posted_insta = sum(1 for p in recent_insta if p["status"] == "posted")
+
     top_keywords = db.get_top_keywords(limit=10)
 
     conn = db._connect()
@@ -91,6 +100,8 @@ def stats():
     # Create Summary Panel
     summary_text = (
         f"Pins Posted (7d): [bold blue]{posted}[/bold blue] / {total_pins}\n"
+        f"Facebook Posts (7d): [bold blue]{posted_fb}[/bold blue] / {total_fb}\n"
+        f"Instagram Posts (7d): [bold blue]{posted_insta}[/bold blue] / {total_insta}\n"
         f"Keywords in DB: [bold blue]{kw_count}[/bold blue]\n"
         f"Trends in DB: [bold blue]{trend_count}[/bold blue]"
     )

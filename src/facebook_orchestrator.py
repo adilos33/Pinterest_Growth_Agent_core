@@ -17,12 +17,18 @@ logger = logging.getLogger(__name__)
 async def run_facebook_daily_cycle(db: Database, config: dict, force: bool = False) -> None:
     """
     The complete daily agent cycle for Facebook:
-    1. Check safety limits
-    2. Research (keywords relevant to Facebook)
-    3. Decide content mix
-    4. Generate images + metadata
-    5. Post to Facebook
+    1. Check credentials
+    2. Check safety limits
+    3. Research (keywords relevant to Facebook)
+    4. Decide content mix
+    5. Generate images + metadata
+    6. Post to Facebook
     """
+    from src.utils.config import has_facebook_credentials
+    if not has_facebook_credentials():
+        logger.info("Facebook credentials not set. Skipping Facebook cycle.")
+        return
+
     logger.info("=== Starting Facebook daily cycle ===")
 
     safety = SafetyManager(db, config, platform='facebook')

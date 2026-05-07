@@ -370,6 +370,32 @@ class Database:
         finally:
             conn.close()
 
+    def get_recent_facebook_posts(self, days: int = 7) -> list[dict]:
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                """SELECT * FROM facebook_posts
+                   WHERE created_at >= datetime('now', ?)
+                   ORDER BY created_at DESC""",
+                (f"-{days} days",),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def get_recent_instagram_posts(self, days: int = 7) -> list[dict]:
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                """SELECT * FROM instagram_posts
+                   WHERE created_at >= datetime('now', ?)
+                   ORDER BY created_at DESC""",
+                (f"-{days} days",),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
     def get_recent_pins(self, days: int = 7) -> list[Pin]:
         conn = self._connect()
         try:

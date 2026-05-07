@@ -83,13 +83,8 @@ class InstagramClient:
 
             logger.info("Instagram session not valid. Performing fresh login...")
 
-            import os
-            username = os.getenv("INSTAGRAM_USERNAME")
-            password = os.getenv("INSTAGRAM_PASSWORD")
-
-            if not username or not password:
-                logger.error("INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD must be set in .env")
-                return False
+            from src.utils.config import get_instagram_credentials
+            username, password = get_instagram_credentials()
 
             # Fill login form
             # On mobile, the fields might be different

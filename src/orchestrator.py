@@ -55,6 +55,13 @@ async def run_daily_cycle(db: Database, config: dict, force: bool = False) -> No
     except Exception:
         pass
 
+    from src.utils.config import get_pinterest_credentials
+    try:
+        get_pinterest_credentials()
+    except ValueError:
+        logger.info("Pinterest credentials not set. Skipping Pinterest cycle.")
+        return
+
     safety = SafetyManager(db, config)
 
     if safety.is_in_cooldown():
