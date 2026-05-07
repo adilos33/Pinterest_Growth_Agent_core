@@ -8,14 +8,29 @@ from src.store.database import Database
 
 logger = logging.getLogger(__name__)
 
-async def discover_instagram_keywords(seed_keywords: list[str], db: Database, config: dict) -> list[Keyword]:
+async def discover_instagram_keywords(seed_keywords: list[str], db: Database, config: dict, insta_client=None) -> list[Keyword]:
     """
     Discover keywords/hashtags on Instagram.
-    Uses a single browser instance to conserve resources.
+    Uses an authenticated browser session if insta_client is provided.
     """
     all_keywords: list[Keyword] = []
-    stealth = Stealth()
 
+    if insta_client:
+        page = await insta_client._launch()
+        for seed in seed_keywords:
+            try:
+                logger.info(f"Extracting Instagram hashtags (authenticated) for seed: {seed}")
+                terms = await _extract_instagram_hashtags(page, seed)
+                for rank, term in enumerate(terms):
+                    kw = Keyword(term=term, suggestion_rank=rank + 1, related_terms=[seed], source="instagram_search")
+                    db.upsert_keyword(kw)
+                    all_keywords.append(kw)
+                await asyncio.sleep(random.uniform(2, 4))
+            except Exception as e:
+                logger.warning(f"Instagram authenticated discovery failed for '{seed}': {e}")
+        return all_keywords
+
+    stealth = Stealth()
     async with stealth.use_async(async_playwright()) as p:
         try:
             headless = config.get("browser", {}).get("headless", False)

@@ -9,15 +9,30 @@ from src.store.database import Database
 
 logger = logging.getLogger(__name__)
 
-async def discover_facebook_keywords(seed_keywords: list[str], db: Database, config: dict) -> list[Keyword]:
+async def discover_facebook_keywords(seed_keywords: list[str], db: Database, config: dict, fb_client=None) -> list[Keyword]:
     """
     Discover keywords on Facebook by searching for seed keywords and
     extracting relevant terms from search results (pages, groups, posts).
-    Uses a single browser instance to conserve resources.
+    Uses an authenticated browser session if fb_client is provided.
     """
     all_keywords: list[Keyword] = []
-    stealth = Stealth()
 
+    if fb_client:
+        page = await fb_client._launch()
+        for seed in seed_keywords:
+            try:
+                logger.info(f"Extracting Facebook terms (authenticated) for seed: {seed}")
+                terms = await _extract_facebook_terms_with_page(page, seed)
+                for rank, term in enumerate(terms):
+                    kw = Keyword(term=term, suggestion_rank=rank + 1, related_terms=[seed], source="facebook_search")
+                    db.upsert_keyword(kw)
+                    all_keywords.append(kw)
+                await asyncio.sleep(random.uniform(2, 4))
+            except Exception as e:
+                logger.warning(f"Facebook authenticated discovery failed for '{seed}': {e}")
+        return all_keywords
+
+    stealth = Stealth()
     async with stealth.use_async(async_playwright()) as p:
         try:
             headless = config.get("browser", {}).get("headless", False)

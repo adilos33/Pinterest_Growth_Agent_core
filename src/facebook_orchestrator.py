@@ -9,6 +9,7 @@ from src.creator.image_generator import generate_image
 from src.creator.metadata_generator import generate_metadata
 from src.worker.facebook_client import FacebookClient
 from src.worker.scheduler import distribute_posting_times, get_daily_limits
+from src.worker.safety_manager import SafetyManager
 from src.models import FacebookPost
 
 logger = logging.getLogger(__name__)
@@ -16,12 +17,18 @@ logger = logging.getLogger(__name__)
 async def run_facebook_daily_cycle(db: Database, config: dict, force: bool = False) -> None:
     """
     The complete daily agent cycle for Facebook:
-    1. Research (keywords relevant to Facebook)
-    2. Decide content mix
-    3. Generate images + metadata
-    4. Post to Facebook
+    1. Check safety limits
+    2. Research (keywords relevant to Facebook)
+    3. Decide content mix
+    4. Generate images + metadata
+    5. Post to Facebook
     """
     logger.info("=== Starting Facebook daily cycle ===")
+
+    safety = SafetyManager(db, config, platform='facebook')
+    if safety.is_in_cooldown():
+        logger.warning("Facebook account in cooldown. Skipping cycle.")
+        return
 
     niche = config.get("niche", {})
     seed_keywords = niche.get("seed_keywords", [])
@@ -35,7 +42,7 @@ async def run_facebook_daily_cycle(db: Database, config: dict, force: bool = Fal
             return
 
         logger.info("Step 1: Facebook Research")
-        keywords = await discover_facebook_keywords(seed_keywords, db, config)
+        keywords = await discover_facebook_keywords(seed_keywords, db, config, fb_client=fb_client)
         logger.info(f"Found {len(keywords)} Facebook-relevant keywords")
 
         logger.info("Step 2: Decision")
@@ -53,6 +60,15 @@ async def run_facebook_daily_cycle(db: Database, config: dict, force: bool = Fal
         logger.info(f"Step 3: Generate and Post ({len(briefs)} posts)")
 
         for i, brief in enumerate(briefs):
+            if not safety.check_daily_limits() and not force:
+                logger.warning("Daily limits reached. Stopping Facebook cycle.")
+                break
+
+            if not safety.check_hourly_limits():
+                logger.warning("Hourly limits reached. Waiting...")
+                await asyncio.sleep(60)
+                continue
+
             try:
                 logger.info(f"Processing brief {i+1}/{len(briefs)}: {brief.target_keyword}")
 
@@ -66,15 +82,27 @@ async def run_facebook_daily_cycle(db: Database, config: dict, force: bool = Fal
                 if metadata.hashtags:
                     post_text += "\n\n" + " ".join(metadata.hashtags)
 
+                post = FacebookPost(
+                    image_path=image_path,
+                    image_hash=image_hash,
+                    text=post_text,
+                    target_keyword=brief.target_keyword,
+                    page_name=config.get("account", {}).get("facebook_page_id", ""),
+                    content_type=brief.content_type,
+                    status="pending"
+                )
+                post_id = db.insert_facebook_post(post)
+
                 # Post to Facebook
                 success = await fb_client.post_content(post_text, image_path)
 
                 if success:
                     logger.info(f"Successfully posted to Facebook: {brief.target_keyword}")
-                    # Log to DB (could expand Database class later for Facebook specific tables)
-                    db.log_action("facebook_post", {"keyword": brief.target_keyword, "status": "success"})
+                    db.update_facebook_post_status(post_id, "posted")
+                    db.log_action("facebook_post", {"keyword": brief.target_keyword, "status": "success", "post_id": post_id}, platform='facebook')
                 else:
                     logger.warning(f"Failed to post to Facebook: {brief.target_keyword}")
+                    db.update_facebook_post_status(post_id, "failed")
 
                 await asyncio.sleep(60) # Wait between posts
 
