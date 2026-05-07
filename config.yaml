@@ -1,6 +1,7 @@
 # Account
 account:
   created_date: "2026-04-24" # Date the Pinterest account was created (for warming schedule)
+  facebook_page_id: "" # Optional: Facebook Page ID to post to
 
 # Browser
 browser:
