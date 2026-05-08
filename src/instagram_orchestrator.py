@@ -11,6 +11,7 @@ from src.creator.metadata_generator import generate_metadata
 from src.worker.instagram_client import InstagramClient
 from src.worker.scheduler import distribute_posting_times, get_daily_limits
 from src.worker.safety_manager import SafetyManager
+from src.models import InstagramPost
 
 logger = logging.getLogger(__name__)
 

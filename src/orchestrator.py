@@ -15,6 +15,7 @@ from src.creator.quality_gate import check_alignment
 from src.worker.pinterest_client import PinterestClient
 from src.facebook_orchestrator import run_facebook_daily_cycle
 from src.instagram_orchestrator import run_instagram_daily_cycle
+from src.twitter_orchestrator import run_twitter_daily_cycle
 from src.worker.scheduler import distribute_posting_times, get_daily_limits
 from src.worker.safety_manager import SafetyManager
 from src.analyzer.engagement_scraper import scrape_engagement
@@ -373,6 +374,16 @@ def start_scheduler(config: dict) -> None:
         args=[db, config],
         id='daily_insta_cycle',
         name='Daily Instagram Growth Cycle'
+    )
+
+    # Schedule Twitter cycle 90 minutes after Pinterest cycle
+    twitter_start_minute = 30
+    twitter_start_hour = (start_hour + 1) % 24
+    scheduler.add_job(
+        run_twitter_daily_cycle, 'cron', hour=twitter_start_hour, minute=twitter_start_minute,
+        args=[db, config],
+        id='daily_twitter_cycle',
+        name='Daily Twitter Growth Cycle'
     )
 
     scheduler.start()

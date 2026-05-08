@@ -25,6 +25,8 @@ class SafetyManager:
             table = "facebook_posts"
         elif self.platform == "instagram":
             table = "instagram_posts"
+        elif self.platform == "twitter":
+            table = "twitter_posts"
 
         conn = self.db._connect()
         try:
@@ -37,7 +39,7 @@ class SafetyManager:
 
             cursor2 = conn.execute(
                 """SELECT COUNT(*) as count FROM agent_log
-                   WHERE action IN ('post', 'facebook_post', 'instagram_post') AND platform = ? AND date(created_at) = ?""",
+                   WHERE action IN ('post', 'facebook_post', 'instagram_post', 'twitter_post') AND platform = ? AND date(created_at) = ?""",
                 (self.platform, today.isoformat(),)
             )
             row2 = cursor2.fetchone()
@@ -70,6 +72,8 @@ class SafetyManager:
             table = "facebook_posts"
         elif self.platform == "instagram":
             table = "instagram_posts"
+        elif self.platform == "twitter":
+            table = "twitter_posts"
 
         conn = self.db._connect()
         try:

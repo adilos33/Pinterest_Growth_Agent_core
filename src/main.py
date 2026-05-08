@@ -10,8 +10,9 @@ from src.store.database import Database
 from src.orchestrator import run_daily_cycle, start_scheduler
 from src.facebook_orchestrator import run_facebook_daily_cycle
 from src.instagram_orchestrator import run_instagram_daily_cycle
+from src.twitter_orchestrator import run_twitter_daily_cycle
 
-app = typer.Typer(help="Pinterest, Facebook & Instagram Growth Agent — AI-powered automation.")
+app = typer.Typer(help="Pinterest, Facebook, Instagram & Twitter Growth Agent — AI-powered automation.")
 console = Console()
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,17 @@ def insta_run_now(
     asyncio.run(run_instagram_daily_cycle(db, config, force=force))
 
 @app.command()
+def twitter_run_now(
+    force: bool = typer.Option(False, "--force", help="Bypass daily safety limits"),
+):
+    """Force a single daily Twitter cycle immediately."""
+    config = load_config()
+    db = Database(config["paths"]["database"])
+    db.initialize()
+    console.print(f"[bold white]Starting manual Twitter daily cycle...[/bold white]")
+    asyncio.run(run_twitter_daily_cycle(db, config, force=force))
+
+@app.command()
 def stats():
     """Show a rich terminal dashboard of agent status and metrics."""
     config = load_config()
@@ -83,6 +95,10 @@ def stats():
     recent_insta = db.get_recent_instagram_posts(days=7)
     total_insta = len(recent_insta)
     posted_insta = sum(1 for p in recent_insta if p["status"] == "posted")
+
+    recent_twitter = db.get_recent_twitter_posts(days=7)
+    total_twitter = len(recent_twitter)
+    posted_twitter = sum(1 for p in recent_twitter if p["status"] == "posted")
 
     top_keywords = db.get_top_keywords(limit=10)
 
@@ -102,6 +118,7 @@ def stats():
         f"Pins Posted (7d): [bold blue]{posted}[/bold blue] / {total_pins}\n"
         f"Facebook Posts (7d): [bold blue]{posted_fb}[/bold blue] / {total_fb}\n"
         f"Instagram Posts (7d): [bold blue]{posted_insta}[/bold blue] / {total_insta}\n"
+        f"Twitter Posts (7d): [bold blue]{posted_twitter}[/bold blue] / {total_twitter}\n"
         f"Keywords in DB: [bold blue]{kw_count}[/bold blue]\n"
         f"Trends in DB: [bold blue]{trend_count}[/bold blue]"
     )

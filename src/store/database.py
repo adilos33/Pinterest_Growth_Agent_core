@@ -75,6 +75,20 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS twitter_posts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    image_path      TEXT,
+    image_hash      TEXT,
+    tweet_text      TEXT NOT NULL,
+    target_keyword  TEXT,
+    content_type    TEXT,
+    status          TEXT DEFAULT 'pending',
+    scheduled_at    TIMESTAMP,
+    posted_at       TIMESTAMP,
+    tweet_url       TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS engagement (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     pin_id          INTEGER REFERENCES pins(id),
@@ -257,6 +271,28 @@ class Database:
         finally:
             conn.close()
 
+    def insert_twitter_post(self, post: 'TwitterPost') -> int:
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                """INSERT INTO twitter_posts (image_path, image_hash, tweet_text,
+                   target_keyword, content_type, status, scheduled_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    post.image_path,
+                    post.image_hash,
+                    post.tweet_text,
+                    post.target_keyword,
+                    post.content_type,
+                    post.status,
+                    post.scheduled_at.isoformat() if post.scheduled_at else None,
+                ),
+            )
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
     def insert_facebook_post(self, post: 'FacebookPost') -> int:
         conn = self._connect()
         try:
@@ -306,6 +342,18 @@ class Database:
         conn = self._connect()
         try:
             conn.execute("UPDATE pins SET status = ? WHERE id = ?", (status, pin_id))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def update_twitter_post_status(self, post_id: int, status: str, url: str | None = None) -> None:
+        conn = self._connect()
+        try:
+            now = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "UPDATE twitter_posts SET status = ?, tweet_url = ?, posted_at = ? WHERE id = ?",
+                (status, url, now if status == "posted" else None, post_id),
+            )
             conn.commit()
         finally:
             conn.close()
@@ -375,6 +423,19 @@ class Database:
         try:
             cursor = conn.execute(
                 """SELECT * FROM facebook_posts
+                   WHERE created_at >= datetime('now', ?)
+                   ORDER BY created_at DESC""",
+                (f"-{days} days",),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def get_recent_twitter_posts(self, days: int = 7) -> list[dict]:
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                """SELECT * FROM twitter_posts
                    WHERE created_at >= datetime('now', ?)
                    ORDER BY created_at DESC""",
                 (f"-{days} days",),
